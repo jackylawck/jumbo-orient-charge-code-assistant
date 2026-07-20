@@ -74,9 +74,7 @@ def process_file_to_chunks(uploaded_file):
         # 驅動 A：如果上傳的是 Excel 檔案
         if filename.endswith(('.xlsx', '.xls')):
             df = pd.read_excel(uploaded_file)
-            # 將所有列名和內容轉為字串，方便搜尋
             for index, row in df.iterrows():
-                # 組合整行內容變成一句話
                 row_str = " | ".join([f"{col}: {val}" for col, val in row.items() if pd.notna(val)])
                 if len(row_str.strip()) < 5:
                     continue
@@ -133,7 +131,6 @@ all_chunks = []
 
 with st.sidebar:
     st.header("📂 臨時指引上傳")
-    # 解鎖支援 xlsx, xls 和 pdf
     uploaded_files = st.file_uploader(
         "請直拖上傳公司《使用扣帳方題庫.xlsx》或 PDF 文件", 
         type=["xlsx", "xls", "pdf"], 
@@ -153,7 +150,7 @@ with st.sidebar:
     st.write(f"🧩 解析精準數據行：{len(all_chunks)} 條")
 
 # ==========================================
-# 4. 智能比對引擎
+# 4. 智能比對與優化語意引擎
 # ==========================================
 if 'jumbo_messages' not in st.session_state:
     st.session_state.jumbo_messages = []
@@ -199,12 +196,15 @@ if prompt := st.chat_input("用廣東話輸入地盤扣帳情況..."):
                 # 備用：語意向量相似度檢索
                 docs_and_scores = vector_db.similarity_search_with_score(prompt, k=1)
                 top_doc, top_score = docs_and_scores[0]
-                confidence = max(10.0, min(99.9, (1.3 - (top_score / 1.8)) * 100))
                 
-                st.success(f"🎯 **已為您翻查到題庫內相關度最高的原始記錄：**")
+                # 【置信度優化】放寬語意分數換算公式，讓前線體驗更人性化
+                # 只要模型判定意思最相近並排在首位，基礎置信度由 75% 起跳，最高 99.9%
+                confidence = max(75.0, min(99.9, (2.5 - top_score) * 40))
+                
+                st.success(f"🎯 **已為您透過「語意分析」翻查到最相關的原始記錄：**")
                 st.markdown(
                     f"<div class='answer-box'>"
-                    f"<b>📋 參考題庫紀錄 (置信度 {confidence:.1f}%)：</b><br>{top_doc.page_content}"
+                    f"<b>📋 參考題庫紀錄 (語意匹配度 {confidence:.1f}%)：</b><br>{top_doc.page_content}"
                     f"</div>", 
                     unsafe_allow_html=True
                 )

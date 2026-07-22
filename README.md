@@ -25,11 +25,11 @@
 
 ## 🛡️ ISO 國際標準與管治合規 (AIMS Compliance)
 
-本系統在架構設計上嚴格遵從 **ISO/IEC 42001:2023 (人工智能管理系統 AIMS)** 及 **ISO/IEC 27001 (資訊安全管理系統)** 的控制規範：
+本系統在架構設計上嚴格遵從 **ISO/IEC 42001:2023 (人工智能管理系統 AIMS)** 及 **ISO/IEC 27001 (資訊安全管理系統 ISMS)** 的控制規範：
 
 * **數據最小化 (Data Minimization - ISO 42001 Annex A.6.2)：** 上傳的 Excel 文件僅暫存於使用者瀏覽器的 Session 本地記憶體中，系統無任何後端資料庫，關閉或重新整理網頁即瞬間徹底銷毀。
 * **數據洩漏防護 (Data Leakage Prevention - ISO 27001 A.8.12)：** 切斷所有第三方 API 連接，全流程於本地邊緣端完成語意比對，防範公司商業機密與 IP 外洩風險。
-* **可解釋性與透明度 (Explainability - ISO 42001 Annex A.8.2)：** 檢索結果嚴格鎖定內部原始 Excel 行數，絕不產生黑箱 AI 幻覺 (Hallucination)，確保輸出結果可審計與可追溯。
+* **可解釋性與透明度 (Explainability - ISO 42001 Annex A.8.2)：** 檢索結果嚴格鎖定內部原始 Excel 行數與條文，絕不產生黑箱 AI 幻覺 (Hallucination)，確保輸出結果可審計與可追溯。
 
 ---
 

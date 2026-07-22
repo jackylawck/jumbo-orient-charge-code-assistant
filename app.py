@@ -92,7 +92,6 @@ def expand_query_semantics(query):
         expanded_terms.append("未能界定 暫支 百份比分配 共同負責 待定")
         
     if expanded_terms:
-        # 組合後的擴展字串只在記憶體內用於相似度比對，不會直接向使用者顯示
         return query + " " + " ".join(expanded_terms)
     
     return query
@@ -109,7 +108,6 @@ def process_file_to_chunks(uploaded_file):
     chunks = []
     
     try:
-        # 驅動 A：如果上傳的是 Excel 檔案
         if filename.endswith(('.xlsx', '.xls')):
             df = pd.read_excel(uploaded_file)
             for index, row in df.iterrows():
@@ -126,7 +124,6 @@ def process_file_to_chunks(uploaded_file):
                 )
                 chunks.append(doc)
                 
-        # 驅動 B：如果上傳的是 PDF 檔案
         elif filename.endswith('.pdf'):
             reader = PdfReader(uploaded_file)
             full_text = ""
@@ -156,7 +153,7 @@ def process_file_to_chunks(uploaded_file):
 # 3. 主畫面佈局
 # ==========================================
 st.title("🏗️ 東淦工程有限公司 (Jumbo Orient)")
-st.subheader("智能扣帳方與合約合規查詢系統 (大灣區術語擴展版)")
+st.subheader("智能扣帳方與合約合規查詢系統")
 
 st.info(
     "🔒 **內部數據安全保障：**\n"
@@ -209,11 +206,9 @@ if prompt := st.chat_input("用廣東話輸入地盤扣帳情況..."):
             st.error("🛑 **系統提示：** 請先在左側上傳 Excel 題庫或 PDF 文件，否則助理無法幫您翻查條文。")
             final_response = "未上傳文件。"
         else:
-            # 1. 啟動港澳大灣區地盤語意擴展，將口語默默補上標準合約詞彙
             enriched_prompt = expand_query_semantics(prompt)
             user_clean = clean_text_for_matching(enriched_prompt)
             
-            # 2. 優先進行強效關鍵字與同義詞命中
             keyword_matched_docs = []
             for chunk in all_chunks:
                 chunk_clean = chunk.metadata["raw_cleaned"]
@@ -233,14 +228,12 @@ if prompt := st.chat_input("用廣東話輸入地盤扣帳情況..."):
                 )
                 final_response = best_doc.page_content
             else:
-                # 3. 備用：使用擴展後的 enriched_prompt 進行向量相似度檢索
                 docs_and_scores = vector_db.similarity_search_with_score(enriched_prompt, k=1)
                 top_doc, top_score = docs_and_scores[0]
                 
-                # 置信度算式放寬，為前線同事提供合理直觀的信任區間
                 confidence = max(75.0, min(99.9, (2.5 - top_score) * 40))
                 
-                st.success(f"🎯 **已為您透過「語意擴展分析」翻查到最相關的原始記錄：**")
+                st.success(f"🎯 **已為您透過「語意分析」翻查到最相關的原始記錄：**")
                 st.markdown(
                     f"<div class='answer-box'>"
                     f"<b>📋 參考題庫紀錄 (語意匹配度 {confidence:.1f}%)：</b><br>{top_doc.page_content}"

@@ -3,8 +3,7 @@ import hashlib
 import re
 import pandas as pd
 
-# 引入本地解析組件
-from pypdf import PdfReader
+# 引入本地向量組件
 from langchain_community.embeddings import HuggingFaceEmbeddings
 from langchain_community.vectorstores import FAISS
 from langchain_core.documents import Document
@@ -101,52 +100,29 @@ def get_embedding_model():
     return HuggingFaceEmbeddings(model_name="sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2")
 
 # ==========================================
-# 🧠 核心優化：雙驅動文件解析引擎 (完美支援 Excel 與 PDF)
+# 🧠 核心優化：純 Excel 結構化解析引擎 (確保數據零雜訊)
 # ==========================================
-def process_file_to_chunks(uploaded_file):
+def process_excel_to_chunks(uploaded_file):
     filename = uploaded_file.name
     chunks = []
     
     try:
-        if filename.endswith(('.xlsx', '.xls')):
-            df = pd.read_excel(uploaded_file)
-            for index, row in df.iterrows():
-                row_str = " | ".join([f"{col}: {val}" for col, val in row.items() if pd.notna(val)])
-                if len(row_str.strip()) < 5:
-                    continue
-                
-                doc = Document(
-                    page_content=row_str,
-                    metadata={
-                        "source": filename,
-                        "raw_cleaned": clean_text_for_matching(row_str)
-                    }
-                )
-                chunks.append(doc)
-                
-        elif filename.endswith('.pdf'):
-            reader = PdfReader(uploaded_file)
-            full_text = ""
-            for page in reader.pages:
-                text = page.extract_text()
-                if text:
-                    full_text += text + "\n"
+        df = pd.read_excel(uploaded_file)
+        for index, row in df.iterrows():
+            row_str = " | ".join([f"{col}: {val}" for col, val in row.items() if pd.notna(val)])
+            if len(row_str.strip()) < 5:
+                continue
             
-            lines = full_text.split("\n")
-            for line in lines:
-                line_text = line.strip()
-                if not line_text or len(line_text) < 8:
-                    continue
-                doc = Document(
-                    page_content=line_text,
-                    metadata={
-                        "source": filename,
-                        "raw_cleaned": clean_text_for_matching(line_text)
-                    }
-                )
-                chunks.append(doc)
+            doc = Document(
+                page_content=row_str,
+                metadata={
+                    "source": filename,
+                    "raw_cleaned": clean_text_for_matching(row_str)
+                }
+            )
+            chunks.append(doc)
     except Exception as e:
-        st.error(f"解析文件時出錯: {str(e)}")
+        st.error(f"解析 Excel 檔案時出錯: {str(e)}")
     return chunks
 
 # ==========================================
@@ -157,7 +133,7 @@ st.subheader("智能扣帳方與合約合規查詢系統")
 
 st.info(
     "🔒 **內部數據安全保障：**\n"
-    "本系統採用純本地數據比對技術，您上傳的 Excel 或 PDF 文件只會暫存在當前網頁會話中。"
+    "本系統採用純本地數據比對技術，您上傳的 Excel 文件只會暫存在當前網頁會話中。"
     "**當您關閉或重新整理網頁時，數據會立即被徹底銷毀**，絕對不會儲存到互聯網上，請放心使用。"
 )
 
@@ -167,21 +143,21 @@ all_chunks = []
 with st.sidebar:
     st.header("📂 臨時指引上傳")
     uploaded_files = st.file_uploader(
-        "請直拖上傳公司《使用扣帳方題庫.xlsx》或 PDF 文件", 
-        type=["xlsx", "xls", "pdf"], 
+        "請直拖上傳公司《使用扣帳方題庫.xlsx》檔案", 
+        type=["xlsx", "xls"], 
         accept_multiple_files=True
     )
 
 if uploaded_files:
     for f in uploaded_files:
-        all_chunks.extend(process_file_to_chunks(f))
+        all_chunks.extend(process_excel_to_chunks(f))
     if all_chunks:
         embeddings = get_embedding_model()
         vector_db = FAISS.from_documents(all_chunks, embeddings)
 
 with st.sidebar:
     st.header("📊 臨時知識庫狀態")
-    st.write(f"📁 已加載文件數：{len(uploaded_files) if uploaded_files else 0} 份")
+    st.write(f"📁 已加載檔案數：{len(uploaded_files) if uploaded_files else 0} 份")
     st.write(f"🧩 解析精準數據行：{len(all_chunks)} 條")
 
 # ==========================================
@@ -203,7 +179,7 @@ if prompt := st.chat_input("用廣東話輸入地盤扣帳情況..."):
         final_response = ""
         
         if vector_db is None or not all_chunks:
-            st.error("🛑 **系統提示：** 請先在左側上傳 Excel 題庫或 PDF 文件，否則助理無法幫您翻查條文。")
+            st.error("🛑 **系統提示：** 請先在左側上傳 Excel 題庫檔案，否則助理無法幫您翻查條文。")
             final_response = "未上傳文件。"
         else:
             enriched_prompt = expand_query_semantics(prompt)

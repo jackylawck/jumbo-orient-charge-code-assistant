@@ -12,7 +12,7 @@ from langchain_core.documents import Document
 # 1. 頁面配置與 UI 樣式
 # ==========================================
 st.set_page_config(
-    page_title="東淦扣帳合規智能助理",
+    page_title="東淦智能扣帳方查詢系統",
     page_icon="🏗️",
     layout="wide"
 )
@@ -129,7 +129,7 @@ def process_excel_to_chunks(uploaded_file):
 # 3. 主畫面佈局
 # ==========================================
 st.title("🏗️ 東淦工程有限公司 (Jumbo Orient)")
-st.subheader("智能扣帳方與合約合規查詢系統")
+st.subheader("智能扣帳方查詢系統")
 
 st.info(
     "🔒 **內部數據安全保障：**\n"
@@ -160,8 +160,9 @@ with st.sidebar:
     st.write(f"📁 已加載檔案數：{len(uploaded_files) if uploaded_files else 0} 份")
     st.write(f"🧩 解析精準數據行：{len(all_chunks)} 條")
     
-    # ⚙️ 低調加入個人 Support 與 LinkedIn 專屬連結
+    # ⚙️ 側邊欄底部加入官方網站與 Support 連結
     st.markdown("---")
+    st.caption("🌐 **東淦工程官網：** [jumboorient.com.hk](https://jumboorient.com.hk/)")
     st.caption("⚙️ 如遇系統問題或特殊情境，請聯絡 [Jacky Law](https://www.linkedin.com/in/jackylawck) 。")
 
 # ==========================================

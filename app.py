@@ -170,7 +170,7 @@ for msg in st.session_state.jumbo_messages:
     with st.chat_message(msg["role"]):
         st.markdown(msg["content"], unsafe_allow_html=True)
 
-if prompt := st.chat_input("用廣東話輸入地盤扣帳情況..."):
+if prompt := st.chat_input("請用中文輸入地盤扣帳情況..."):
     st.session_state.jumbo_messages.append({"role": "user", "content": prompt})
     with st.chat_message("user"):
         st.markdown(prompt)

@@ -159,6 +159,10 @@ with st.sidebar:
     st.header("📊 臨時知識庫狀態")
     st.write(f"📁 已加載檔案數：{len(uploaded_files) if uploaded_files else 0} 份")
     st.write(f"🧩 解析精準數據行：{len(all_chunks)} 條")
+    
+    # ⚙️ 低調加入個人 Support 與 LinkedIn 專屬連結
+    st.markdown("---")
+    st.caption("⚙️ 如遇系統問題或特殊情境，請聯絡 [Jacky Law](https://www.linkedin.com/in/jackylawck) 。")
 
 # ==========================================
 # 4. 智能比對與語意擴展引擎

@@ -211,3 +211,37 @@ if prompt := st.chat_input("用廣東話輸入地盤扣帳情況..."):
                 final_response = top_doc.page_content
         
         st.session_state.jumbo_messages.append({"role": "assistant", "content": final_response})
+
+# 🛡️ 通用工程情境同義詞擴展器 (Query Expansion)
+# 作用：將前線口語自動擴展為標準合約/審計用語，提升本地向量比對命中率
+def expand_query_semantics(query):
+    expanded_terms = []
+    q_lower = query.lower()
+    
+    # 類別 1：安裝與施工瑕疵 (對應安裝修正類)
+    if any(w in q_lower for w in ["執修", "重做", "改尺寸", "安裝", "裝錯", "拆除"]):
+        expanded_terms.append("安裝 Installation 重新安裝 重做 執修 修正 額外工程費用")
+        
+    # 類別 2：物料與採購失誤 (對應物料修正類)
+    if any(w in q_lower for w in ["買錯", "料", "材料", "重購", "買過"]):
+        expanded_terms.append("物料 Material 重新購買物料 採購失誤")
+        
+    # 類別 3：服務與檢測 (對應服務修正類)
+    if any(w in q_lower for w in ["打針", "測試", "驗收", "檢測", "服務"]):
+        expanded_terms.append("服務 Service 重新進行檢測 運輸 專業服務")
+        
+    # 類別 4：行政罰款 (對應行政費用類)
+    if any(w in q_lower for w in ["食煙", "吸煙", "罰款", "debit note", "架步", "垃圾費"]):
+        expanded_terms.append("行政費用 行政罰款 內部問題導致地盤主判扣除")
+        
+    # 類別 5：供應商/第三方責任 (對應供應商/分判商扣帳)
+    if any(w in q_lower for w in ["供應商", "出廠", "不合格", "質量欠佳", "判頭", "借工"]):
+        expanded_terms.append("供應商生產出不合格品 分判商安裝物料出現問題 責任歸屬")
+        
+    # 將擴展的標準字眼默默加入原本的查詢中，送給 AI 引擎去搜尋
+    if expanded_terms:
+        # 組合後的查詢字串只在記憶體內用於相似度搜尋，不會顯示給用戶看
+        enriched_query = query + " " + " ".join(expanded_terms)
+        return enriched_query
+    
+    return query

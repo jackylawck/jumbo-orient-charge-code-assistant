@@ -51,13 +51,51 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # ==========================================
-# 2. 🛡️ 文字模糊比對清理工具
+# 2. 🛡️ 文字模糊比對清理與廣東話/大灣區術語擴展引擎
 # ==========================================
 def clean_text_for_matching(text):
     if not text:
         return ""
     text = re.sub(r'[^\w\u4e00-\u9fa5]', '', str(text))
     return text.lower().strip()
+
+def expand_query_semantics(query):
+    """
+    港澳大灣區地盤通用同義詞擴展器 (Query Expansion)
+    作用：將前線口語、地盤術語自動擴展為標準合約用語，提升本地向量比對命中率，且零公司機密
+    """
+    expanded_terms = []
+    q_lower = query.lower()
+    
+    # 類別 1：安裝與施工瑕疵 (對應 安裝/Installation 修正類)
+    if any(w in q_lower for w in ["執修", "重做", "改尺寸", "安裝", "裝錯", "拆除", "執漏", "執手尾", "拆嘢", "搞錯位"]):
+        expanded_terms.append("安裝 Installation 重新安裝 重做 執修 修正 額外工程費用 內部圖紙出錯 拆卸")
+        
+    # 類別 2：物料與採購失誤 (對應 物料/Material 修正類)
+    if any(w in q_lower for w in ["買錯", "料", "材料", "重購", "買過", "買錯料", "訂錯嘢", "廢料", "爛料", "覆尺"]):
+        expanded_terms.append("物料 Material 重新購買物料 採購失誤 操作不當導致需重購物料 遺失配件")
+        
+    # 類別 3：服務與檢測 (對應 服務/Service 修正類)
+    if any(w in q_lower for w in ["打針", "測試", "驗收", "檢測", "服務", "肥佬", "pass唔到", "搵車"]):
+        expanded_terms.append("服務 Service 重新進行檢測 運輸 重新執修後需重做測試 不合格")
+        
+    # 類別 4：行政罰款與雜費 (對應 行政費用類)
+    if any(w in q_lower for w in ["食煙", "吸煙", "罰款", "debit note", "架步", "垃圾費", "太公分豬肉", "罰錢", "扣數", "寫紙"]):
+        expanded_terms.append("行政費用 行政罰款 內部問題導致地盤主判扣除 清垃圾費用 Debit Note")
+        
+    # 類別 5：供應商/第三方責任 (對應 分判商/供應商扣帳)
+    if any(w in q_lower for w in ["供應商", "出廠", "不合格", "質量欠佳", "判頭", "借工", "代工", "貨唔對辦", "廠出錯", "他判"]):
+        expanded_terms.append("供應商生產出不合格品 分判商安裝物料出現問題 責任歸屬 質量欠佳 連工包料")
+        
+    # 類別 6：待定或多方分攤 (對應 待定/多方分配)
+    if any(w in q_lower for w in ["未定", "唔知邊個錯", "傾唔掂數", "夾錢", "攤分", "百分比", "共同負責", "未介定"]):
+        expanded_terms.append("未能界定 暫支 百份比分配 共同負責 待定")
+        
+    if expanded_terms:
+        # 組合後的擴展字串只在記憶體內用於相似度比對，不會直接向使用者顯示
+        return query + " " + " ".join(expanded_terms)
+    
+    return query
 
 @st.cache_resource(show_spinner="🔒 正在啟動內部查詢安全組件...")
 def get_embedding_model():
@@ -118,7 +156,7 @@ def process_file_to_chunks(uploaded_file):
 # 3. 主畫面佈局
 # ==========================================
 st.title("🏗️ 東淦工程有限公司 (Jumbo Orient)")
-st.subheader("智能扣帳方與合約合規查詢系統 (Excel / PDF 智能版)")
+st.subheader("智能扣帳方與合約合規查詢系統 (大灣區術語擴展版)")
 
 st.info(
     "🔒 **內部數據安全保障：**\n"
@@ -150,7 +188,7 @@ with st.sidebar:
     st.write(f"🧩 解析精準數據行：{len(all_chunks)} 條")
 
 # ==========================================
-# 4. 智能比對與優化語意引擎
+# 4. 智能比對與語意擴展引擎
 # ==========================================
 if 'jumbo_messages' not in st.session_state:
     st.session_state.jumbo_messages = []
@@ -171,18 +209,20 @@ if prompt := st.chat_input("用廣東話輸入地盤扣帳情況..."):
             st.error("🛑 **系統提示：** 請先在左側上傳 Excel 題庫或 PDF 文件，否則助理無法幫您翻查條文。")
             final_response = "未上傳文件。"
         else:
-            user_clean = clean_text_for_matching(prompt)
+            # 1. 啟動港澳大灣區地盤語意擴展，將口語默默補上標準合約詞彙
+            enriched_prompt = expand_query_semantics(prompt)
+            user_clean = clean_text_for_matching(enriched_prompt)
             
-            # 優先進行強效關鍵字命中
+            # 2. 優先進行強效關鍵字與同義詞命中
             keyword_matched_docs = []
             for chunk in all_chunks:
                 chunk_clean = chunk.metadata["raw_cleaned"]
-                if len(user_clean) >= 4 and (user_clean in chunk_clean or chunk_clean in user_clean):
+                if len(clean_text_for_matching(prompt)) >= 4 and (user_clean in chunk_clean or chunk_clean in user_clean):
                     keyword_matched_docs.append(chunk)
             
             if keyword_matched_docs:
                 st.success("🎯 **系統已為您精準命中題庫內對應的原始記錄：**")
-                st.markdown("<div class='confidence-badge'>🎯 Excel 行精準對齊：100% 命中</div>", unsafe_allow_html=True)
+                st.markdown("<div class='confidence-badge'>🎯 智能語意精準對齊：100% 命中</div>", unsafe_allow_html=True)
                 
                 best_doc = keyword_matched_docs[0]
                 st.markdown(
@@ -193,15 +233,14 @@ if prompt := st.chat_input("用廣東話輸入地盤扣帳情況..."):
                 )
                 final_response = best_doc.page_content
             else:
-                # 備用：語意向量相似度檢索
-                docs_and_scores = vector_db.similarity_search_with_score(prompt, k=1)
+                # 3. 備用：使用擴展後的 enriched_prompt 進行向量相似度檢索
+                docs_and_scores = vector_db.similarity_search_with_score(enriched_prompt, k=1)
                 top_doc, top_score = docs_and_scores[0]
                 
-                # 【置信度優化】放寬語意分數換算公式，讓前線體驗更人性化
-                # 只要模型判定意思最相近並排在首位，基礎置信度由 75% 起跳，最高 99.9%
+                # 置信度算式放寬，為前線同事提供合理直觀的信任區間
                 confidence = max(75.0, min(99.9, (2.5 - top_score) * 40))
                 
-                st.success(f"🎯 **已為您透過「語意分析」翻查到最相關的原始記錄：**")
+                st.success(f"🎯 **已為您透過「語意擴展分析」翻查到最相關的原始記錄：**")
                 st.markdown(
                     f"<div class='answer-box'>"
                     f"<b>📋 參考題庫紀錄 (語意匹配度 {confidence:.1f}%)：</b><br>{top_doc.page_content}"
@@ -211,37 +250,3 @@ if prompt := st.chat_input("用廣東話輸入地盤扣帳情況..."):
                 final_response = top_doc.page_content
         
         st.session_state.jumbo_messages.append({"role": "assistant", "content": final_response})
-
-# 🛡️ 通用工程情境同義詞擴展器 (Query Expansion)
-# 作用：將前線口語自動擴展為標準合約/審計用語，提升本地向量比對命中率
-def expand_query_semantics(query):
-    expanded_terms = []
-    q_lower = query.lower()
-    
-    # 類別 1：安裝與施工瑕疵 (對應安裝修正類)
-    if any(w in q_lower for w in ["執修", "重做", "改尺寸", "安裝", "裝錯", "拆除"]):
-        expanded_terms.append("安裝 Installation 重新安裝 重做 執修 修正 額外工程費用")
-        
-    # 類別 2：物料與採購失誤 (對應物料修正類)
-    if any(w in q_lower for w in ["買錯", "料", "材料", "重購", "買過"]):
-        expanded_terms.append("物料 Material 重新購買物料 採購失誤")
-        
-    # 類別 3：服務與檢測 (對應服務修正類)
-    if any(w in q_lower for w in ["打針", "測試", "驗收", "檢測", "服務"]):
-        expanded_terms.append("服務 Service 重新進行檢測 運輸 專業服務")
-        
-    # 類別 4：行政罰款 (對應行政費用類)
-    if any(w in q_lower for w in ["食煙", "吸煙", "罰款", "debit note", "架步", "垃圾費"]):
-        expanded_terms.append("行政費用 行政罰款 內部問題導致地盤主判扣除")
-        
-    # 類別 5：供應商/第三方責任 (對應供應商/分判商扣帳)
-    if any(w in q_lower for w in ["供應商", "出廠", "不合格", "質量欠佳", "判頭", "借工"]):
-        expanded_terms.append("供應商生產出不合格品 分判商安裝物料出現問題 責任歸屬")
-        
-    # 將擴展的標準字眼默默加入原本的查詢中，送給 AI 引擎去搜尋
-    if expanded_terms:
-        # 組合後的查詢字串只在記憶體內用於相似度搜尋，不會顯示給用戶看
-        enriched_query = query + " " + " ".join(expanded_terms)
-        return enriched_query
-    
-    return query

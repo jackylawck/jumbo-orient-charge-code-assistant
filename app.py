@@ -160,10 +160,10 @@ with st.sidebar:
     st.write(f"📁 已加載檔案數：{len(uploaded_files) if uploaded_files else 0} 份")
     st.write(f"🧩 解析精準數據行：{len(all_chunks)} 條")
     
-    # ⚙️ 側邊欄底部加入公司網站與 Support 連結
+    # ⚙️ 側邊欄底部加入公司網站與個人網站 Support 連結
     st.markdown("---")
     st.caption("🌐 **公司網站：** [jumboorient.com.hk](https://jumboorient.com.hk/)")
-    st.caption("⚙️ 如遇系統問題或特殊情境，請聯絡 [Jacky Law](https://www.linkedin.com/in/jackylawck) 。")
+    st.caption("⚙️ 如遇系統問題或特殊情境，請聯絡 [Jacky Law](https://jackylawck.github.io/jackylawck/) 。")
 
 # ==========================================
 # 4. 智能比對與語意擴展引擎
